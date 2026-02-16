@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>چت داخلی P2P - بدون سرور</title>
+    <title>چت داخلی اداره - نسخه کاربردی</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
         
@@ -17,8 +18,8 @@
         :root {
             --primary: #2e7d32;
             --secondary: #1565c0;
-            --bg: #f0f2f5;
             --danger: #d32f2f;
+            --bg: #f0f2f5;
         }
 
         body {
@@ -26,7 +27,6 @@
             min-height: 100vh;
         }
 
-        /* صفحه ورود */
         .setup-container {
             position: fixed;
             top: 0;
@@ -54,35 +54,12 @@
         .setup-box h1 {
             color: var(--primary);
             margin-bottom: 10px;
-            font-size: 28px;
         }
 
         .setup-box p {
             color: #666;
             margin-bottom: 30px;
             line-height: 1.8;
-        }
-
-        .room-id-display {
-            background: #e3f2fd;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border: 2px dashed var(--secondary);
-        }
-
-        .room-id {
-            font-size: 32px;
-            font-weight: 900;
-            color: var(--secondary);
-            letter-spacing: 5px;
-            user-select: all;
-            cursor: pointer;
-        }
-
-        .room-id:hover {
-            background: #bbdefb;
-            border-radius: 8px;
         }
 
         .input-group {
@@ -94,22 +71,14 @@
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
-            color: #333;
         }
 
-        .input-group input {
+        .input-group input, .input-group select {
             width: 100%;
             padding: 15px;
             border: 2px solid #ddd;
             border-radius: 10px;
             font-size: 16px;
-            text-align: center;
-            transition: border-color 0.3s;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--primary);
         }
 
         .btn {
@@ -122,8 +91,8 @@
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
             margin-top: 10px;
+            transition: all 0.3s;
         }
 
         .btn:hover {
@@ -135,30 +104,12 @@
             background: var(--secondary);
         }
 
-        .divider {
-            margin: 30px 0;
-            position: relative;
-            text-align: center;
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: #ddd;
-        }
-
-        .divider span {
-            background: white;
-            padding: 0 15px;
-            position: relative;
-            color: #666;
-        }
-
-        /* چت اصلی */
         .chat-container {
             display: none;
             height: 100vh;
@@ -201,32 +152,9 @@
             animation: pulse 2s infinite;
         }
 
-        .status-connecting .status-dot {
-            background: #e65100;
-        }
-
-        .status-connected .status-dot {
-            background: #4caf50;
-        }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
-        }
-
-        .peers-list {
-            display: flex;
-            gap: 10px;
-        }
-
-        .peer-badge {
-            background: #e3f2fd;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
         .main-content {
@@ -236,30 +164,45 @@
         }
 
         .sidebar {
-            width: 280px;
+            width: 300px;
             background: white;
             border-left: 1px solid #ddd;
             padding: 20px;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .info-card {
-            background: #f5f5f5;
+        .info-box {
+            background: #e3f2fd;
             padding: 15px;
             border-radius: 10px;
-            margin-bottom: 20px;
             font-size: 14px;
         }
 
-        .info-card strong {
-            color: var(--primary);
+        .info-box strong {
+            color: var(--secondary);
+            display: block;
+            margin-bottom: 5px;
         }
 
-        .file-list {
-            margin-top: 20px;
+        .peer-id-box {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            cursor: pointer;
+            border: 2px dashed #ff9800;
         }
 
-        .file-item {
+        .connections-list {
+            flex: 1;
+        }
+
+        .connection-item {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -267,12 +210,13 @@
             background: #f5f5f5;
             border-radius: 8px;
             margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .file-item:hover {
-            background: #e3f2fd;
+        .connection-status-icon {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
         }
 
         .chat-area {
@@ -291,12 +235,12 @@
 
         .message {
             max-width: 70%;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             animation: slideIn 0.3s ease-out;
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -367,12 +311,6 @@
             color: #666;
         }
 
-        .file-status {
-            font-size: 11px;
-            color: var(--primary);
-            margin-top: 5px;
-        }
-
         .input-area {
             background: white;
             padding: 20px;
@@ -399,7 +337,6 @@
             border: 2px solid #ddd;
             border-radius: 25px;
             font-size: 15px;
-            transition: border-color 0.3s;
         }
 
         .message-input:focus {
@@ -417,7 +354,6 @@
             align-items: center;
             justify-content: center;
             font-size: 20px;
-            transition: all 0.3s;
         }
 
         .attach-btn {
@@ -425,27 +361,15 @@
             color: #666;
         }
 
-        .attach-btn:hover {
-            background: #e0e0e0;
-        }
-
         .send-btn {
             background: var(--primary);
             color: white;
         }
 
-        .send-btn:hover {
-            background: #1b5e20;
-            transform: scale(1.1);
-        }
-
         .send-btn:disabled {
             background: #ccc;
-            cursor: not-allowed;
-            transform: none;
         }
 
-        /* نوتفیکیشن */
         .toast {
             position: fixed;
             top: 20px;
@@ -454,9 +378,6 @@
             padding: 15px 20px;
             border-radius: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            gap: 10px;
             transform: translateX(-400px);
             transition: transform 0.3s;
             z-index: 3000;
@@ -467,123 +388,63 @@
             transform: translateX(0);
         }
 
-        .toast-icon {
-            font-size: 24px;
+        .connect-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
         }
 
-        /* راهنما */
-        .help-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
-
-        .help-modal.active {
-            display: flex;
-        }
-
-        .help-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .help-content h2 {
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-
-        .help-content ol {
-            line-height: 2;
-            padding-right: 20px;
-        }
-
-        .help-content li {
+        .connect-panel input {
+            width: 100%;
+            padding: 10px;
             margin-bottom: 10px;
-        }
-
-        .close-help {
-            float: left;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        /* ریسپانسیو */
-        @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-        }
-
-        /* اسکرول بار */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
 
         .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- صفحه راه‌اندازی -->
+    <!-- صفحه ورود -->
     <div class="setup-container" id="setupContainer">
         <div class="setup-box">
-            <h1>💬 چت P2P بدون سرور</h1>
-            <p>بدون نیاز به نصب! فقط کد اتاق را به همکارانتان بدهید</p>
+            <h1>💬 چت داخلی اداره</h1>
+            <p>بدون نیاز به نصب سرور - مستقیم بین کامپیوترها</p>
 
-            <!-- ایجاد اتاق جدید -->
-            <div id="createRoomSection">
-                <button class="btn" onclick="createRoom()">🚀 ایجاد اتاق جدید</button>
-                
-                <div class="divider"><span>یا</span></div>
-                
-                <div class="input-group">
-                    <label>ورود به اتاق موجود:</label>
-                    <input type="text" id="joinRoomId" placeholder="کد ۶ رقمی را وارد کنید" maxlength="6">
-                </div>
-                <button class="btn btn-secondary" onclick="joinRoom()">🔗 اتصال به اتاق</button>
+            <div class="input-group">
+                <label>نام شما:</label>
+                <input type="text" id="usernameInput" placeholder="مثلاً: علی" maxlength="20">
             </div>
 
-            <!-- نمایش کد اتاق -->
-            <div id="roomCreatedSection" class="hidden">
-                <div class="room-id-display">
-                    <div style="margin-bottom:10px;color:#666;">کد اتاق شما:</div>
-                    <div class="room-id" id="roomIdDisplay" onclick="copyRoomId()">------</div>
-                    <div style="margin-top:10px;font-size:12px;color:#666;">کلیک کنید تا کپی شود</div>
+            <button class="btn" id="startBtn" onclick="startChat()">
+                🚀 شروع چت
+            </button>
+
+            <div id="connectSection" class="hidden" style="margin-top:20px;">
+                <div class="info-box">
+                    <strong>🆔 شناسه شما (این را کپی کنید):</strong>
+                    <div class="peer-id-box" id="myPeerId" onclick="copyId()">
+                        در حال دریافت...
+                    </div>
                 </div>
-                
-                <div class="input-group">
-                    <label>نام شما:</label>
-                    <input type="text" id="usernameInput" placeholder="مثلاً: علی" maxlength="20">
+
+                <div class="connect-panel">
+                    <label style="display:block;margin-bottom:5px;font-weight:bold;">شناسه همکار را وارد کنید:</label>
+                    <input type="text" id="peerIdInput" placeholder="مثلاً: abc123...">
+                    <button class="btn btn-secondary" onclick="connectToPeer()">
+                        🔗 اتصال
+                    </button>
                 </div>
-                
-                <button class="btn" onclick="enterChat()">✅ ورود به چت</button>
-                
-                <div style="margin-top:20px;padding:15px;background:#fff3e0;border-radius:10px;font-size:14px;">
-                    <strong>📋 راهنما:</strong><br>
-                    این کد را به همکارانتان بدهید تا به اتاق وصل شوند.
+
+                <div style="margin-top:15px;font-size:12px;color:#666;">
+                    💡 این شناسه را به همکارانتان بدهید تا به شما وصل شوند
                 </div>
             </div>
         </div>
@@ -593,34 +454,38 @@
     <div class="chat-container" id="chatContainer">
         <div class="chat-header">
             <div>
-                <h2 style="color: var(--primary);">💬 اتاق: <span id="displayRoomId">----</span></h2>
+                <h2 style="color: var(--primary);">💬 چت داخلی</h2>
             </div>
-            <div style="display:flex;gap:15px;align-items:center;">
-                <div class="peers-list" id="peersList"></div>
-                <div class="connection-status status-connecting" id="connectionStatus">
-                    <span class="status-dot"></span>
-                    <span>در حال اتصال...</span>
-                </div>
-                <button onclick="showHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;">❓</button>
+            <div class="connection-status status-connecting" id="connectionStatus">
+                <span class="status-dot"></span>
+                <span>در حال اتصال...</span>
             </div>
         </div>
 
         <div class="main-content">
             <div class="sidebar">
-                <div class="info-card">
-                    <strong>🆔 شناسه شما:</strong><br>
-                    <span id="myId" style="font-family:monospace;font-size:12px;"></span>
-                </div>
-                
-                <div class="info-card">
-                    <strong>👥 کاربران متصل:</strong>
-                    <div id="usersList" style="margin-top:10px;"></div>
+                <div class="info-box">
+                    <strong>👤 شما:</strong>
+                    <span id="displayUsername">---</span>
                 </div>
 
-                <div class="file-list" id="fileList">
-                    <strong>📁 فایل‌های دریافتی:</strong>
-                    <div style="margin-top:10px;font-size:12px;color:#666;">هنوز فایلی دریافت نشده</div>
+                <div class="info-box">
+                    <strong>🆔 شناسه شما:</strong>
+                    <div class="peer-id-box" id="sidebarPeerId" style="margin-top:5px;" onclick="copyId()">
+                        ---
+                    </div>
                 </div>
+
+                <div class="connections-list">
+                    <strong>🔗 اتصالات:</strong>
+                    <div id="connectionsList" style="margin-top:10px;">
+                        <div style="color:#999;font-size:14px;">هنوز کسی وصل نشده</div>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="showConnectDialog()" style="margin-top:auto;">
+                    ➕ افزودن همکار
+                </button>
             </div>
 
             <div class="chat-area">
@@ -628,7 +493,7 @@
                     <div style="text-align:center;padding:40px;color:#999;">
                         <div style="font-size:48px;margin-bottom:20px;">👋</div>
                         <h3>به چت خوش آمدید!</h3>
-                        <p>پیام خود را بنویسید و Enter بزنید</p>
+                        <p>برای شروع، شناسه خود را به همکارانتان بدهید</p>
                     </div>
                 </div>
                 
@@ -640,9 +505,8 @@
                         </button>
                         <input type="file" id="fileInput" style="display:none" onchange="sendFile(this.files[0])">
                         <input type="text" class="message-input" id="messageInput" 
-                               placeholder="پیام خود را بنویسید..." 
+                               placeholder="پیام خود را بنویسید و Enter بزنید..." 
                                onkeypress="handleKeyPress(event)"
-                               oninput="handleTyping()"
                                disabled>
                         <button class="icon-btn send-btn" id="sendBtn" onclick="sendMessage()" disabled>
                             ➤
@@ -653,259 +517,164 @@
         </div>
     </div>
 
-    <!-- راهنما -->
-    <div class="help-modal" id="helpModal" onclick="hideHelp(event)">
-        <div class="help-content" onclick="event.stopPropagation()">
-            <button class="close-help" onclick="hideHelp()">×</button>
-            <h2>📖 راهنمای استفاده</h2>
-            <ol>
-                <li><strong>ایجاد اتاق:</strong> روی "ایجاد اتاق جدید" کلیک کنید</li>
-                <li><strong>کد اتاق:</strong> کد ۶ رقمی نمایش داده شده را کپی کنید</li>
-                <li><strong>اشتراک‌گذاری:</strong> این کد را به همکارانتان بدهید</li>
-                <li><strong>اتصال:</strong> همکاران با وارد کردن کد به اتاق وصل می‌شوند</li>
-                <li><strong>چت:</strong> حالا می‌توانید پیام و فایل رد و بدل کنید!</li>
-            </ol>
-            <div style="margin-top:20px;padding:15px;background:#e3f2fd;border-radius:10px;">
-                <strong>💡 نکته:</strong> این چت کاملاً P2P است و هیچ سروری در میان نیست. 
-                اگر همه کاربران صفحه را ببندند، اتاق پاک می‌شود.
+    <!-- دیالوگ اتصال -->
+    <div id="connectDialog" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;justify-content:center;align-items:center;">
+        <div style="background:white;padding:30px;border-radius:20px;max-width:400px;width:90%;">
+            <h3 style="margin-bottom:20px;">🔗 اتصال به همکار</h3>
+            <input type="text" id="dialogPeerId" placeholder="شناسه همکار" style="width:100%;padding:15px;border:2px solid #ddd;border-radius:10px;margin-bottom:15px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn" onclick="connectFromDialog()" style="flex:1;">اتصال</button>
+                <button class="btn" onclick="hideConnectDialog()" style="flex:1;background:#666;">انصراف</button>
             </div>
         </div>
     </div>
 
     <!-- Toast -->
-    <div class="toast" id="toast">
-        <span class="toast-icon" id="toastIcon">📢</span>
-        <div>
-            <div id="toastTitle" style="font-weight:bold;"></div>
-            <div id="toastMessage" style="font-size:14px;color:#666;"></div>
-        </div>
-    </div>
+    <div class="toast" id="toast"></div>
 
     <script>
-        // ==================== WebRTC Chat Application ====================
-        
-        let roomId;
+        let peer;
+        let myId;
         let username;
-        let myId = generateId();
-        let connections = new Map(); // peerId -> {connection, dataChannel, username}
+        let connections = new Map(); // peerId -> {conn, username}
         let messageHistory = [];
-        let receivedFiles = new Map();
-        let typingTimer;
-        let isTyping = false;
 
-        // تولید ID تصادفی
-        function generateId() {
-            return Math.random().toString(36).substr(2, 9);
-        }
-
-        // تولید کد اتاق
-        function generateRoomId() {
-            return Math.floor(100000 + Math.random() * 900000).toString();
-        }
-
-        // ==================== UI Functions ====================
-
-        function createRoom() {
-            roomId = generateRoomId();
-            document.getElementById('roomIdDisplay').textContent = roomId;
-            document.getElementById('createRoomSection').classList.add('hidden');
-            document.getElementById('roomCreatedSection').classList.remove('hidden');
-        }
-
-        function joinRoom() {
-            const input = document.getElementById('joinRoomId');
-            roomId = input.value.trim();
+        function startChat() {
+            username = document.getElementById('usernameInput').value.trim() || 'کاربر ناشناس';
             
-            if (roomId.length !== 6 || !/^\d+$/.test(roomId)) {
-                showToast('❌ خطا', 'کد اتاق باید ۶ رقم باشد');
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').textContent = '⏳ در حال اتصال به سرور...';
+
+            // ساخت Peer با سرور رایگان PeerJS
+            peer = new Peer({
+                host: 'peerjs-server.herokuapp.com',
+                secure: true,
+                port: 443,
+                debug: 2
+            });
+
+            peer.on('open', (id) => {
+                myId = id;
+                document.getElementById('myPeerId').textContent = id;
+                document.getElementById('sidebarPeerId').textContent = id;
+                document.getElementById('displayUsername').textContent = username;
+                document.getElementById('connectSection').classList.remove('hidden');
+                document.getElementById('startBtn').textContent = '✅ آماده';
+                showToast('✅ آماده شد! شناسه شما: ' + id.substring(0, 8) + '...');
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                showToast('❌ خطا: ' + err.message);
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('startBtn').textContent = '🚀 تلاش مجدد';
+            });
+
+            // دریافت درخواست اتصال
+            peer.on('connection', (conn) => {
+                handleConnection(conn);
+            });
+        }
+
+        function handleConnection(conn) {
+            conn.on('open', () => {
+                console.log('Connection opened with:', conn.peer);
+                
+                // ارسال اطلاعات خود
+                conn.send({
+                    type: 'intro',
+                    username: username,
+                    peerId: myId
+                });
+
+                connections.set(conn.peer, {
+                    conn: conn,
+                    username: 'در حال اتصال...',
+                    connected: true
+                });
+
+                updateConnectionsList();
+                updateConnectionStatus();
+                enableChat();
+            });
+
+            conn.on('data', (data) => {
+                handleData(conn.peer, data);
+            });
+
+            conn.on('close', () => {
+                console.log('Connection closed:', conn.peer);
+                const connInfo = connections.get(conn.peer);
+                showToast('👋 ' + (connInfo?.username || 'همکار') + ' قطع شد');
+                connections.delete(conn.peer);
+                updateConnectionsList();
+                if (connections.size === 0) {
+                    updateConnectionStatus(false);
+                }
+            });
+
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+                showToast('❌ خطای اتصال');
+            });
+        }
+
+        function connectToPeer() {
+            const peerId = document.getElementById('peerIdInput').value.trim();
+            if (!peerId) {
+                showToast('❌ شناسه را وارد کنید');
                 return;
             }
-            
-            document.getElementById('roomIdDisplay').textContent = roomId;
-            document.getElementById('createRoomSection').classList.add('hidden');
-            document.getElementById('roomCreatedSection').classList.remove('hidden');
-        }
 
-        function copyRoomId() {
-            const code = document.getElementById('roomIdDisplay').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                showToast('✅ کپی شد', 'کد اتاق در کلیپ‌بورد ذخیره شد');
-            });
-        }
-
-        function enterChat() {
-            const input = document.getElementById('usernameInput');
-            username = input.value.trim() || 'کاربر ناشناس';
-            
-            document.getElementById('setupContainer').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('displayRoomId').textContent = roomId;
-            document.getElementById('myId').textContent = myId;
-            
-            initializeWebRTC();
-        }
-
-        // ==================== WebRTC Core ====================
-
-        function initializeWebRTC() {
-            // استفاده از PeerJS یا سیگنالینگ دستی
-            // اینجا از روش دستی با استفاده از copy-paste SDP استفاده می‌کنیم
-            
-            showToast('ℹ️ راهنما', 'برای اتصال، کد SDP را با همکاران خود به اشتراک بگذارید');
-            
-            // ایجاد اتصال به عنوان host یا joiner
-            setupConnection();
-        }
-
-        function setupConnection() {
-            // اینجا باید از یک signaling server استفاده کنیم
-            // ولی چون نمی‌خواهیم سرور داشته باشیم، از روش manual signaling استفاده می‌کنیم
-            
-            const config = {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            };
-
-            // نمایش دکمه برای کپی/پیست SDP
-            showSDPPanel();
-        }
-
-        function showSDPPanel() {
-            // ایجاد پنل برای تبادل دستی SDP
-            const panel = document.createElement('div');
-            panel.id = 'sdpPanel';
-            panel.innerHTML = `
-                <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:30px;border-radius:20px;box-shadow:0 20px60px rgba(0,0,0,0.3);z-index:2500;max-width:500px;width:90%;">
-                    <h3 style="margin-bottom:20px;color:var(--primary);">🔗 اتصال دستی (بدون سرور)</h3>
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block;margin-bottom:5px;font-weight:bold;">کد اتصال شما (کپی کنید):</label>
-                        <textarea id="localSDP" readonly style="width:100%;height:100px;padding:10px;border:2px solid #ddd;border-radius:8px;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
-                        <button onclick="createOffer()" style="margin-top:10px;padding:8px 15px;background:var(--primary);color:white;border:none;border-radius:5px;cursor:pointer;">🔄 تولید کد</button>
-                    </div>
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block;margin-bottom:5px;font-weight:bold;">کد همکار را اینجا پیست کنید:</label>
-                        <textarea id="remoteSDP" style="width:100%;height:100px;padding:10px;border:2px solid #ddd;border-radius:8px;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
-                        <button onclick="acceptAnswer()" style="margin-top:10px;padding:8px 15px;background:var(--secondary);color:white;border:none;border-radius:5px;cursor:pointer;">✅ اتصال</button>
-                    </div>
-                    <button onclick="closeSDPPanel()" style="width:100%;padding:10px;background:#f44336;color:white;border:none;border-radius:8px;cursor:pointer;">❌ بستن</button>
-                </div>
-                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2400;" onclick="closeSDPPanel()"></div>
-            `;
-            document.body.appendChild(panel);
-        }
-
-        let localConnection;
-        let sendChannel;
-
-        async function createOffer() {
-            localConnection = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-            });
-
-            sendChannel = localConnection.createDataChannel('chat', {
-                ordered: true
-            });
-            
-            setupDataChannel(sendChannel, 'host');
-
-            localConnection.onicecandidate = event => {
-                if (!event.candidate) {
-                    document.getElementById('localSDP').value = btoa(JSON.stringify(localConnection.localDescription));
-                }
-            };
-
-            const offer = await localConnection.createOffer();
-            await localConnection.setLocalDescription(offer);
-        }
-
-        async function acceptAnswer() {
-            const sdp = JSON.parse(atob(document.getElementById('remoteSDP').value));
-            await localConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-            closeSDPPanel();
-            onConnected();
-        }
-
-        // برای کاربری که join می‌کند
-        async function joinAsGuest() {
-            const remoteDesc = JSON.parse(atob(document.getElementById('remoteSDP').value));
-            
-            localConnection = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-            });
-
-            localConnection.ondatachannel = event => {
-                sendChannel = event.channel;
-                setupDataChannel(sendChannel, 'guest');
-            };
-
-            await localConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
-            
-            const answer = await localConnection.createAnswer();
-            await localConnection.setLocalDescription(answer);
-
-            localConnection.onicecandidate = event => {
-                if (!event.candidate) {
-                    document.getElementById('localSDP').value = btoa(JSON.stringify(localConnection.localDescription));
-                    showToast('✅ آماده', 'کد پاسخ شما تولید شد. آن را کپی کنید.');
-                }
-            };
-        }
-
-        function setupDataChannel(channel, role) {
-            channel.onopen = () => {
-                console.log('Data channel opened!');
-                onConnected();
-                broadcastUserInfo();
-            };
-
-            channel.onmessage = event => {
-                handleMessage(JSON.parse(event.data));
-            };
-
-            channel.onclose = () => {
-                showToast('⚠️ قطع شد', 'اتصال با همکار قطع شد');
-                updateConnectionStatus(false);
-            };
-        }
-
-        function onConnected() {
-            updateConnectionStatus(true);
-            document.getElementById('messageInput').disabled = false;
-            document.getElementById('sendBtn').disabled = false;
-            showToast('✅ متصل شد', 'اکنون می‌توانید چت کنید!');
-        }
-
-        function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.className = 'connection-status status-connected';
-                status.innerHTML = '<span class="status-dot"></span><span>متصل</span>';
-            } else {
-                status.className = 'connection-status status-connecting';
-                status.innerHTML = '<span class="status-dot"></span><span>قطع شده</span>';
+            if (peerId === myId) {
+                showToast('❌ نمی‌توانید به خودتان وصل شوید!');
+                return;
             }
+
+            if (connections.has(peerId)) {
+                showToast('⚠️ قبلاً وصل هستید');
+                return;
+            }
+
+            showToast('⏳ در حال اتصال...');
+            const conn = peer.connect(peerId, {
+                reliable: true
+            });
+
+            handleConnection(conn);
         }
 
-        // ==================== Messaging ====================
-
-        function handleMessage(data) {
+        function handleData(fromPeerId, data) {
             switch(data.type) {
+                case 'intro':
+                    // معرفی کاربر
+                    const connInfo = connections.get(fromPeerId);
+                    if (connInfo) {
+                        connInfo.username = data.username;
+                        updateConnectionsList();
+                        showToast('✅ ' + data.username + ' وصل شد!');
+                        
+                        // حذف پیام خوش‌آمدگویی
+                        const container = document.getElementById('messagesContainer');
+                        if (container.children.length === 1) {
+                            container.innerHTML = '';
+                        }
+                    }
+                    break;
+
                 case 'chat':
-                    displayMessage(data);
+                    displayMessage({
+                        ...data,
+                        isOwn: false
+                    });
                     break;
-                case 'typing':
-                    showTyping(data.username, data.isTyping);
-                    break;
+
                 case 'file-offer':
-                    handleFileOffer(data);
+                    handleFileOffer(fromPeerId, data);
                     break;
+
                 case 'file-chunk':
                     handleFileChunk(data);
-                    break;
-                case 'user-info':
-                    addPeer(data);
                     break;
             }
         }
@@ -913,28 +682,37 @@
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
-            if (!text || !sendChannel || sendChannel.readyState !== 'open') return;
+            
+            if (!text || connections.size === 0) return;
 
             const message = {
                 type: 'chat',
                 id: Date.now(),
                 username: username,
                 text: text,
-                timestamp: new Date().toISOString(),
-                isOwn: true
+                timestamp: new Date().toISOString()
             };
 
-            sendChannel.send(JSON.stringify(message));
-            displayMessage({...message, isOwn: true});
-            input.value = '';
-            stopTyping();
+            // ارسال به همه
+            let sent = false;
+            connections.forEach((connInfo, peerId) => {
+                if (connInfo.conn.open) {
+                    connInfo.conn.send(message);
+                    sent = true;
+                }
+            });
+
+            if (sent) {
+                displayMessage({...message, isOwn: true});
+                input.value = '';
+            }
         }
 
         function displayMessage(data) {
             const container = document.getElementById('messagesContainer');
             
-            // حذف پیام خوش‌آمدگویی اگر وجود دارد
-            if (container.children.length === 1 && container.children[0].querySelector('h3')) {
+            // حذف پیام اولیه
+            if (container.children.length === 1 && container.querySelector('h3')) {
                 container.innerHTML = '';
             }
 
@@ -948,7 +726,7 @@
 
             div.innerHTML = `
                 <div class="message-header">
-                    <span>${data.isOwn ? 'شما' : data.username}</span>
+                    <span style="font-weight:bold;">${data.isOwn ? 'شما' : data.username}</span>
                     <span style="color:#999;">${time}</span>
                 </div>
                 <div class="message-content">${escapeHtml(data.text)}</div>
@@ -960,107 +738,123 @@
 
         // ==================== File Transfer ====================
 
+        let receivingFiles = new Map();
+
         async function sendFile(file) {
-            if (!file || !sendChannel || sendChannel.readyState !== 'open') {
-                showToast('❌ خطا', 'اتصال برقرار نیست');
+            if (!file || connections.size === 0) {
+                showToast('❌ ابتدا به کسی وصل شوید');
                 return;
             }
 
+            const fileId = Date.now().toString();
             const chunkSize = 16384; // 16KB
-            const fileId = generateId();
             
-            // ارسال اطلاعات فایل
-            sendChannel.send(JSON.stringify({
-                type: 'file-offer',
-                fileId: fileId,
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                username: username
-            }));
+            showToast('📤 در حال آماده‌سازی فایل...');
 
-            // خواندن و ارسال فایل
             const buffer = await file.arrayBuffer();
             const totalChunks = Math.ceil(buffer.byteLength / chunkSize);
-            
-            showToast('📤 در حال ارسال', `فایل ${file.name} در حال ارسال...`);
 
+            // ارسال اطلاعات فایل
+            connections.forEach((connInfo) => {
+                if (connInfo.conn.open) {
+                    connInfo.conn.send({
+                        type: 'file-offer',
+                        fileId: fileId,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        totalChunks: totalChunks
+                    });
+                }
+            });
+
+            // ارسال chunk ها
             for (let i = 0; i < totalChunks; i++) {
                 const chunk = buffer.slice(i * chunkSize, (i + 1) * chunkSize);
                 const base64 = arrayBufferToBase64(chunk);
-                
-                sendChannel.send(JSON.stringify({
-                    type: 'file-chunk',
-                    fileId: fileId,
-                    chunk: base64,
-                    index: i,
-                    total: totalChunks
-                }));
 
-                // نمایش پیشرفت
+                connections.forEach((connInfo) => {
+                    if (connInfo.conn.open) {
+                        connInfo.conn.send({
+                            type: 'file-chunk',
+                            fileId: fileId,
+                            chunk: base64,
+                            index: i
+                        });
+                    }
+                });
+
                 if (i % 10 === 0) {
                     const progress = Math.round((i / totalChunks) * 100);
-                    updateFileProgress(fileId, progress);
+                    document.getElementById('typingIndicator').textContent = 
+                        `📤 در حال ارسال: ${progress}%`;
                 }
             }
 
-            showToast('✅ ارسال شد', 'فایل با موفقیت ارسال شد');
+            document.getElementById('typingIndicator').textContent = '';
+            showToast('✅ فایل ارسال شد');
+            
+            // نمایش در چت
+            displayMessage({
+                type: 'chat',
+                id: Date.now(),
+                username: username,
+                text: `📎 فایل ارسال شد: ${file.name} (${formatFileSize(file.size)})`,
+                timestamp: new Date().toISOString(),
+                isOwn: true
+            });
         }
 
-        function handleFileOffer(data) {
-            receivedFiles.set(data.fileId, {
+        function handleFileOffer(fromPeerId, data) {
+            receivingFiles.set(data.fileId, {
                 chunks: [],
                 fileName: data.fileName,
                 fileSize: data.fileSize,
-                received: 0
+                received: 0,
+                total: data.totalChunks
             });
             
-            showToast('📥 دریافت فایل', `فایل ${data.fileName} در حال دریافت...`);
+            showToast('📥 دریافت فایل: ' + data.fileName);
         }
 
         function handleFileChunk(data) {
-            const file = receivedFiles.get(data.fileId);
+            const file = receivingFiles.get(data.fileId);
             if (!file) return;
 
             file.chunks[data.index] = base64ToArrayBuffer(data.chunk);
             file.received++;
 
-            if (file.received === data.total) {
+            if (file.received === file.total) {
                 // تکمیل فایل
                 const blob = new Blob(file.chunks);
                 const url = URL.createObjectURL(blob);
                 
-                addFileToList(file.fileName, file.fileSize, url);
-                showToast('✅ دریافت شد', `فایل ${file.fileName} دریافت شد`);
-            }
-        }
+                // نمایش در چت
+                displayMessage({
+                    type: 'chat',
+                    id: Date.now(),
+                    username: connections.get(data.fileId)?.username || 'همکار',
+                    text: `📎 فایل دریافت شد: ${file.fileName}`,
+                    timestamp: new Date().toISOString(),
+                    isOwn: false
+                });
 
-        function addFileToList(name, size, url) {
-            const list = document.getElementById('fileList');
-            const sizeStr = formatFileSize(size);
-            
-            const item = document.createElement('div');
-            item.className = 'file-item';
-            item.innerHTML = `
-                <div class="file-icon">📄</div>
-                <div class="file-info">
-                    <div class="file-name">${name}</div>
-                    <div class="file-size">${sizeStr}</div>
-                </div>
-            `;
-            item.onclick = () => {
+                // ایجاد لینک دانلود
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = name;
-                a.click();
-            };
+                a.download = file.fileName;
+                a.style.display = 'block';
+                a.style.marginTop = '5px';
+                a.style.color = 'var(--secondary)';
+                a.textContent = '⬇️ دانلود فایل';
+                
+                const lastMessage = document.getElementById('messagesContainer').lastChild;
+                if (lastMessage) {
+                    lastMessage.querySelector('.message-content').appendChild(a);
+                }
 
-            // حذف پیام "هنوز فایلی دریافت نشده"
-            if (list.children[1] && list.children[1].tagName === 'DIV') {
-                list.children[1].remove();
+                showToast('✅ فایل دریافت شد: ' + file.fileName);
+                receivingFiles.delete(data.fileId);
             }
-
-            list.appendChild(item);
         }
 
         // ==================== Utilities ====================
@@ -1101,121 +895,85 @@
             if (e.key === 'Enter') sendMessage();
         }
 
-        function handleTyping() {
-            if (!sendChannel || sendChannel.readyState !== 'open') return;
+        function copyId() {
+            navigator.clipboard.writeText(myId).then(() => {
+                showToast('✅ شناسه کپی شد!');
+            });
+        }
+
+        function updateConnectionsList() {
+            const list = document.getElementById('connectionsList');
             
-            if (!isTyping) {
-                sendChannel.send(JSON.stringify({
-                    type: 'typing',
-                    username: username,
-                    isTyping: true
-                }));
-                isTyping = true;
+            if (connections.size === 0) {
+                list.innerHTML = '<div style="color:#999;font-size:14px;">هنوز کسی وصل نشده</div>';
+                return;
             }
 
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(stopTyping, 1000);
+            list.innerHTML = Array.from(connections.entries()).map(([peerId, info]) => `
+                <div class="connection-item">
+                    <div class="connection-status-icon"></div>
+                    <div>
+                        <div style="font-weight:bold;">${info.username}</div>
+                        <div style="font-size:11px;color:#666;">${peerId.substring(0, 15)}...</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function stopTyping() {
-            if (!isTyping) return;
-            sendChannel.send(JSON.stringify({
-                type: 'typing',
-                username: username,
-                isTyping: false
-            }));
-            isTyping = false;
+        function updateConnectionStatus(connected = true) {
+            const status = document.getElementById('connectionStatus');
+            if (connected && connections.size > 0) {
+                status.className = 'connection-status status-connected';
+                status.innerHTML = `<span class="status-dot"></span><span>${connections.size} همکار متصل</span>`;
+            } else {
+                status.className = 'connection-status status-connecting';
+                status.innerHTML = '<span class="status-dot"></span><span>در انتظار اتصال...</span>';
+            }
         }
 
-        function showTyping(username, isTyping) {
-            const indicator = document.getElementById('typingIndicator');
-            indicator.textContent = isTyping ? `✍️ ${username} در حال نوشتن...` : '';
+        function enableChat() {
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('setupContainer').style.display = 'none';
         }
 
-        function showToast(title, message) {
+        function showConnectDialog() {
+            document.getElementById('connectDialog').style.display = 'flex';
+        }
+
+        function hideConnectDialog() {
+            document.getElementById('connectDialog').style.display = 'none';
+        }
+
+        function connectFromDialog() {
+            const id = document.getElementById('dialogPeerId').value.trim();
+            if (id) {
+                document.getElementById('peerIdInput').value = id;
+                connectToPeer();
+                hideConnectDialog();
+            }
+        }
+
+        function showToast(message) {
             const toast = document.getElementById('toast');
-            document.getElementById('toastIcon').textContent = title.includes('❌') ? '❌' : 
-                                                               title.includes('✅') ? '✅' : 
-                                                               title.includes('📤') ? '📤' : 
-                                                               title.includes('📥') ? '📥' : 'ℹ️';
-            document.getElementById('toastTitle').textContent = title;
-            document.getElementById('toastMessage').textContent = message;
-            
+            toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 4000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        function showHelp() {
-            document.getElementById('helpModal').classList.add('active');
-        }
-
-        function hideHelp(e) {
-            if (!e || e.target.id === 'helpModal') {
-                document.getElementById('helpModal').classList.remove('active');
-            }
-        }
-
-        function closeSDPPanel() {
-            const panel = document.getElementById('sdpPanel');
-            if (panel) panel.remove();
-        }
-
-        function broadcastUserInfo() {
-            if (sendChannel && sendChannel.readyState === 'open') {
-                sendChannel.send(JSON.stringify({
-                    type: 'user-info',
-                    id: myId,
-                    username: username
-                }));
-            }
-        }
-
-        function addPeer(data) {
-            const list = document.getElementById('usersList');
-            const peersList = document.getElementById('peersList');
-            
-            if (!document.getElementById(`peer-${data.id}`)) {
-                const div = document.createElement('div');
-                div.id = `peer-${data.id}`;
-                div.innerHTML = `<div style="padding:5px;background:#e3f2fd;border-radius:5px;margin-bottom:5px;">${data.username}</div>`;
-                list.appendChild(div);
-
-                const badge = document.createElement('div');
-                badge.className = 'peer-badge';
-                badge.textContent = data.username;
-                peersList.appendChild(badge);
-            }
-        }
-
-        // اضافه کردن دکمه برای joiner
+        // شروع خودکار اگر قبلاً نام وارد شده
         window.addEventListener('load', () => {
-            // بررسی پارامتر URL
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('join')) {
-                document.querySelector('.divider').insertAdjacentHTML('afterend', `
-                    <button onclick="joinAsGuestMode()" style="width:100%;padding:10px;background:#ff9800;color:white;border:none;border-radius:8px;cursor:pointer;margin-top:10px;">
-                        🔗 حالت مهمان (دریافت کد اولیه)
-                    </button>
-                `);
+            const savedName = localStorage.getItem('chatUsername');
+            if (savedName) {
+                document.getElementById('usernameInput').value = savedName;
             }
         });
 
-        function joinAsGuestMode() {
-            document.getElementById('createRoomSection').classList.add('hidden');
-            document.getElementById('roomCreatedSection').classList.remove('hidden');
-            document.querySelector('#roomCreatedSection .btn').onclick = startAsGuest;
-        }
-
-        async function startAsGuest() {
-            username = document.getElementById('usernameInput').value.trim() || 'مهمان';
-            document.getElementById('setupContainer').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('displayRoomId').textContent = 'مهمان';
-            
-            showSDPPanel();
-            // تغییر تابع برای حالت guest
-            document.querySelector('button[onclick="createOffer()"]').onclick = joinAsGuest;
-        }
+        // ذخیره نام
+        document.getElementById('usernameInput').addEventListener('change', (e) => {
+            localStorage.setItem('chatUsername', e.target.value);
+        });
     </script>
 </body>
 </html>
